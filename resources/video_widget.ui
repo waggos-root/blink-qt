@@ -24,7 +24,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>icons/blink48.png</normaloff>icons/blink48.png</iconset>
+    <normaloff>icons/blink.png</normaloff>icons/blink.png</iconset>
   </property>
   <layout class="QGridLayout" name="video_widget_layout">
    <property name="margin">

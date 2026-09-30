@@ -772,7 +772,7 @@ class ServerToolsWindow(base_class, ui_class, metaclass=QSingleton):
         with Resources.directory:
             self.setupUi()
         self.setWindowTitle('Blink Server Tools')
-        self.setWindowIcon(QIcon(Resources.get('icons/blink48.png')))
+        self.setWindowIcon(QIcon(Resources.get('icons/blink.png')))
         self.model = model
         self.model.rowsInserted.connect(self._SH_ModelChanged)
         self.model.rowsRemoved.connect(self._SH_ModelChanged)

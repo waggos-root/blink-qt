@@ -1,3 +1,10 @@
+blink (6.0.8+headset18) noble; urgency=medium
+
+  * Use the high resolution icon for all windows and install hicolor
+    theme icons, so the icons are sharp on HiDPI screens
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 16:43:37 -0500
+
 blink (6.0.8+headset17) noble; urgency=medium
 
   * Show the presence state as a dot on the system tray icon when not

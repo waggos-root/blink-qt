@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>icons/blink48.png</normaloff>icons/blink48.png</iconset>
+    <normaloff>icons/blink.png</normaloff>icons/blink.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="window_layout">

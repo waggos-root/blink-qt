@@ -898,7 +898,7 @@ class GoogleAuthorizationView(QWebEngineView):
         super(GoogleAuthorizationView, self).__init__(parent)
         self.email = None
         self.setWindowTitle('Blink Google Authorization')
-        self.setWindowIcon(QIcon(Resources.get('icons/blink48.png')))
+        self.setWindowIcon(QIcon(Resources.get('icons/blink.png')))
         self.selectionChanged.connect(self._SH_SelectionChanged)
         self.titleChanged.connect(self._SH_TitleChanged)
         self.urlChanged.connect(self._SH_URLChanged)
