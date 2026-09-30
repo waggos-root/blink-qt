@@ -5,8 +5,8 @@ import os
 from functools import partial
 
 from PyQt6 import uic
-from PyQt6.QtCore import Qt, QSettings, QUrl, QTranslator
-from PyQt6.QtGui import QDesktopServices, QIcon, QAction, QActionGroup, QShortcut
+from PyQt6.QtCore import Qt, QEvent, QRectF, QSettings, QSize, QUrl, QTranslator
+from PyQt6.QtGui import QColor, QDesktopServices, QIcon, QAction, QActionGroup, QPainter, QPalette, QPen, QPixmap, QShortcut
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMenu, QStyle, QStyleOptionComboBox, QStyleOptionFrame, QSystemTrayIcon, QApplication, QStyleFactory
 from PyQt6.QtWidgets import QMessageBox
 
@@ -35,6 +35,7 @@ from blink.presence import PendingWatcherDialog
 from blink.resources import ApplicationData, IconManager, Resources
 from blink.util import run_in_gui_thread, translate
 from blink.widgets.buttons import AccountState, SwitchViewButton
+from blink.widgets.util import is_dark_palette, palette_icon, recolored_svg_pixmaps
 
 
 __all__ = ['MainWindow']
@@ -87,6 +88,10 @@ class MainWindow(base_class, ui_class):
         if geometry:
             self.restoreGeometry(geometry)
 
+        self.monochrome_icons = {button: button.icon() for button in (self.add_contact_button, self.audio_call_button, self.video_call_button, self.chat_session_button, self.screen_sharing_button)}
+        self.silent_button_icon = self.silent_button.icon()
+        self._update_monochrome_icons()
+
         self.default_icon_path = Resources.get('icons/default-avatar.png')
         self.default_icon = QIcon(self.default_icon_path)
         self.last_icon_directory = Path('~').normalized
@@ -107,12 +112,21 @@ class MainWindow(base_class, ui_class):
 
         # System tray
         if QSystemTrayIcon.isSystemTrayAvailable():
-            self.system_tray_icon = QSystemTrayIcon(QIcon(Resources.get('icons/blink.png')), self)
+            self.system_tray_default_icon = QIcon(Resources.get('icons/blink.png'))
+            self.system_tray_icon = QSystemTrayIcon(self.system_tray_default_icon, self)
             self.system_tray_icon.activated.connect(self._SH_SystemTrayIconActivated)
             menu = QMenu(self)
             menu.addAction(translate("main_window", "Show"), self._AH_SystemTrayShowWindow)
+            menu.addSeparator()
+            # the presence button menu is shared, so the states and the note history are the same and are handled by the button
+            self.account_state.menu().setTitle(translate("main_window", "Presence"))
+            self.system_tray_presence_action = menu.addMenu(self.account_state.menu())
+            self.system_tray_presence_action.setIcon(QIcon(self.account_state.state.icon))
+            menu.addSeparator()
             menu.addAction(QIcon(Resources.get('icons/application-exit.png')), translate("main_window", "Quit"), self._AH_QuitActionTriggered)
+            menu.aboutToShow.connect(self._SH_SystemTrayMenuAboutToShow)
             self.system_tray_icon.setContextMenu(menu)
+            self._update_system_tray_icon()
             self.system_tray_icon.show()
         else:
             self.system_tray_icon = None
@@ -276,6 +290,31 @@ class MainWindow(base_class, ui_class):
         self.identity.initStyleOption(option)
         wide_padding = self.identity.style().subControlRect(QStyle.ComplexControl.CC_ComboBox, option, QStyle.SubControl.SC_ComboBoxEditField, self.identity).height() < 10
         self.identity.setStyleSheet("""QComboBox { padding: 0px 4px 0px 4px; }""" if wide_padding else "")
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.Type.PaletteChange:
+            self._update_monochrome_icons()
+        super(MainWindow, self).changeEvent(event)
+
+    def _update_monochrome_icons(self):
+        for button, icon in self.monochrome_icons.items():
+            button.setIcon(palette_icon(icon, self.palette()))
+        # The dark gray crossed bell shown while silent mode is off needs a light variant on dark palettes. The slash is only told
+        # apart by its darker shade, so the icon cannot simply be tinted: draw both the bell and the slash with the text color and
+        # outline them with the background color, keeping the red bell used while silent mode is on.
+        if is_dark_palette(self.palette()):
+            text_color = self.palette().color(QPalette.ColorRole.WindowText).name()
+            background_color = self.palette().color(QPalette.ColorRole.Window).name()
+            replacements = {'fill:#505050': 'fill:' + text_color,
+                            'stroke:#000000': 'stroke:' + background_color,
+                            'fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none': 'fill:%s;fill-opacity:1;fill-rule:nonzero;stroke:%s;stroke-width:0.7' % (text_color, background_color)}
+            icon = QIcon()
+            for pixmap in recolored_svg_pixmaps(Resources.get('icons/bell-on.svg'), replacements):
+                icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
+            icon.addFile(Resources.get('icons/bell-off.svg'), QSize(), QIcon.Mode.Normal, QIcon.State.On)
+            self.silent_button.setIcon(icon)
+        else:
+            self.silent_button.setIcon(self.silent_button_icon)
 
     def closeEvent(self, event):
         QSettings().setValue("main_window/geometry", self.saveGeometry())
@@ -616,6 +655,9 @@ class MainWindow(base_class, ui_class):
         QApplication.instance().quit()
 
     def _SH_AccountStateChanged(self):
+        if self.system_tray_icon is not None:
+            self.system_tray_presence_action.setIcon(QIcon(self.account_state.state.icon))
+            self._update_system_tray_icon()
         self.activity_note.setText(self.account_state.note)
         if self.account_state.state is AccountState.Invisible:
             self.activity_note.inactiveText = translate('main_window', '(invisible)')
@@ -962,6 +1004,29 @@ class MainWindow(base_class, ui_class):
 
     def _SH_PendingWatcherDialogFinished(self, result):
         self.pending_watcher_dialogs.remove(self.sender())
+
+    def _update_system_tray_icon(self):
+        # show the presence state as a dot in the corner of the icon, unless available
+        state = self.account_state.state
+        if state == AccountState.Available:
+            self.system_tray_icon.setIcon(self.system_tray_default_icon)
+            return
+        icon = QIcon()
+        for size in (16, 22, 24, 32, 44, 48, 64, 128):
+            pixmap = self.system_tray_default_icon.pixmap(size, size)
+            diameter = size * 0.5
+            outline = max(1.0, size / 16)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setBrush(QColor(state.color))
+            painter.setPen(QPen(QColor(0, 0, 0, 170), outline))
+            painter.drawEllipse(QRectF(size - diameter - outline / 2, size - diameter - outline / 2, diameter, diameter))
+            painter.end()
+            icon.addPixmap(pixmap)
+        self.system_tray_icon.setIcon(icon)
+
+    def _SH_SystemTrayMenuAboutToShow(self):
+        self.system_tray_presence_action.setEnabled(self.account_state.isEnabled())
 
     def _SH_SystemTrayIconActivated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:

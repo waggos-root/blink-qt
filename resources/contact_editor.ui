@@ -52,7 +52,7 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="2" rowspan="2">
+   <item row="0" column="2" alignment="Qt::AlignRight|Qt::AlignVCenter">
     <widget class="IconSelector" name="icon_selector">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Minimum">

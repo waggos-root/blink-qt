@@ -3960,7 +3960,7 @@
    </property>
    <property name="icon">
     <iconset>
-     <normaloff>icons/chat.png</normaloff>icons/chat.png</iconset>
+     <normaloff>icons/chat.svg</normaloff>icons/chat.svg</iconset>
    </property>
    <property name="text">
     <string>Messages</string>

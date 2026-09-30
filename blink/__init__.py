@@ -45,6 +45,7 @@ from blink.logswindow import LogsWindow
 from blink.configuration.account import AccountExtension, BonjourAccountExtension
 from blink.configuration.addressbook import ContactExtension, GroupExtension
 from blink.configuration.settings import SIPSimpleSettingsExtension
+from blink.headset import HeadsetManager
 from blink.logging import LogManager
 from blink.mainwindow import MainWindow
 from blink.presence import PresenceManager
@@ -52,6 +53,7 @@ from blink.resources import ApplicationData, Resources
 from blink.sessions import SessionManager
 from blink.update import UpdateManager
 from blink.util import QSingleton, run_in_gui_thread
+from blink.widgets.util import IconPaletteAdapter
 
 
 __all__ = ['Blink']
@@ -117,6 +119,8 @@ class Blink(QApplication, metaclass=QSingleton):
 
     def __init__(self):
         super(Blink, self).__init__(sys.argv)
+        self.icon_palette_adapter = IconPaletteAdapter(self)
+        self.installEventFilter(self.icon_palette_adapter)  # lighten dark monochrome icons on dark palettes (before any window is created)
         self.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, False)
         self.sip_application = SIPApplication()
         self.first_run = False
@@ -139,6 +143,7 @@ class Blink(QApplication, metaclass=QSingleton):
         self.setOrganizationDomain("ag-projects.com")
         self.setOrganizationName("AG Projects")
         self.setApplicationName("Blink")
+        self.setDesktopFileName("blink")  # identifies the windows as blink.desktop to the window manager (Wayland app_id)
         self.setApplicationVersion(__version__)
         self.setWindowIcon(QIcon(Resources.get('icons/blink.png')))
 
@@ -164,6 +169,7 @@ class Blink(QApplication, metaclass=QSingleton):
         self.chat_window.addAction(self.main_window.received_files_window_action)
         self.chat_window.addAction(self.main_window.screenshots_window_action)
 
+        self.headset_manager = HeadsetManager()
         self.ip_address_monitor = IPAddressMonitor()
         self.log_manager = LogManager()
         self.presence_manager = PresenceManager()
@@ -195,6 +201,7 @@ class Blink(QApplication, metaclass=QSingleton):
         self.first_run = not os.path.exists(ApplicationData.get('config'))
         self.sip_application.start(FileStorage(ApplicationData.directory))
         self.exec()
+        self.headset_manager.stop()
         self.update_manager.shutdown()
         self.sip_application.stop()
         self.sip_application.thread.join()
@@ -266,6 +273,7 @@ class Blink(QApplication, metaclass=QSingleton):
     @run_in_gui_thread
     def _NH_SIPApplicationDidStart(self, notification):
         self.ip_address_monitor.start()
+        self.headset_manager.start()
         self.main_window.show()
         accounts = AccountManager().get_accounts()
         if not accounts or (self.first_run and accounts == [BonjourAccount()]):

@@ -7,7 +7,7 @@ import urllib.request, urllib.parse, urllib.error
 
 from PyQt6 import uic, sip
 from PyQt6.QtCore import Qt, QAbstractListModel, QModelIndex, QSortFilterProxyModel, QUrl, QUrlQuery
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QPalette
 from PyQt6.QtNetwork import QAuthenticator
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -32,6 +32,7 @@ from blink.contacts import URIUtils
 from blink.resources import ApplicationData, IconManager, Resources
 from blink.sessions import SessionManager, StreamDescription
 from blink.widgets.labels import Status
+from blink.widgets.util import is_dark_palette, palette_icon
 from blink.util import QSingleton, call_in_gui_thread, run_in_gui_thread, translate
 
 
@@ -122,7 +123,7 @@ class AccountModel(QAbstractListModel):
         if role == Qt.ItemDataRole.DisplayRole:
             return account_info.name
         elif role == Qt.ItemDataRole.DecorationRole:
-            return account_info.icon
+            return palette_icon(account_info.icon)
         elif role == Qt.ItemDataRole.UserRole:
             return account_info
         return None
@@ -331,6 +332,10 @@ class AddAccountDialog(base_class, ui_class, metaclass=QSingleton):
         with Resources.directory:
             self.setupUi(self)
         self.background_frame.setStyleSheet("")
+        if is_dark_palette(self.palette()):
+            # the input frame is a translucent light panel, which the palette text is unreadable on. Use the window color instead.
+            color = self.palette().color(QPalette.ColorRole.Window)
+            self.input_frame.setStyleSheet(self.input_frame.styleSheet().replace('rgba(244, 244, 244, 228)', 'rgba(%d, %d, %d, 228)' % (color.red(), color.green(), color.blue())))
         self.button_group = QButtonGroup(self)
         self.button_group.setObjectName("button_group")
         self.button_group.addButton(self.add_account_button, self.panel_view.indexOf(self.add_account_panel))
@@ -786,6 +791,7 @@ class ServerToolsWindow(base_class, ui_class, metaclass=QSingleton):
     def setupUi(self):
         super(ServerToolsWindow, self).setupUi(self)
         self.account_button.default_avatar = QIcon(Resources.get('icons/default-avatar.png'))
+        self.account_button.setProperty('keepIconColors', True)  # shows the user icon
         self.account_button.setIcon(IconManager().get('avatar') or self.account_button.default_avatar)
         self.account_button.setMenu(QMenu(self.account_button))
         self.back_button.setMenu(QMenu(self.back_button))

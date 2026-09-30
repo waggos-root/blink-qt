@@ -54,7 +54,7 @@ from blink.messages import MessageManager
 from blink.util import call_in_gui_thread, run_in_gui_thread, translate
 from blink.widgets.buttons import SwitchViewButton
 from blink.widgets.color import ColorHelperMixin
-from blink.widgets.util import ContextMenuActions
+from blink.widgets.util import ContextMenuActions, adapted_icon, is_dark_palette
 
 
 __all__ = ['Group', 'Contact', 'ContactModel', 'ContactSearchModel', 'ContactListView', 'ContactSearchListView', 'ContactEditorDialog', 'URIUtils']
@@ -1628,8 +1628,11 @@ class Contact(object):
             return self.__dict__['pixmap']
         except KeyError:
             size = 32
+            ratio = QApplication.instance().devicePixelRatio()
+            icon = adapted_icon(self.icon) if self.icon is self.default_user_icon else self.icon  # the default icon is a dark outline, which follows the palette
             if self.stylish_icons:
-                pixmap = QPixmap(size, size)
+                pixmap = QPixmap(int(size * ratio), int(size * ratio))
+                pixmap.setDevicePixelRatio(ratio)
                 pixmap.fill(Qt.GlobalColor.transparent)
                 path = QPainterPath()
                 path.addRoundedRect(0, 0, size, size, 3.7, 3.7)
@@ -1637,10 +1640,10 @@ class Contact(object):
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
                 painter.setClipPath(path)
-                self.icon.paint(painter, pixmap.rect(), Qt.AlignmentFlag.AlignCenter)
+                icon.paint(painter, QRect(0, 0, size, size), Qt.AlignmentFlag.AlignCenter)
                 painter.end()
             else:
-                pixmap = self.icon.pixmap(size)
+                pixmap = icon.pixmap(QSize(size, size), ratio)
             return self.__dict__.setdefault('pixmap', pixmap)
 
     def handle_notification(self, notification):
@@ -1784,8 +1787,11 @@ class ContactDetail(object):
             return self.__dict__['pixmap']
         except KeyError:
             size = 32
+            ratio = QApplication.instance().devicePixelRatio()
+            icon = adapted_icon(self.icon) if self.icon is self.default_user_icon else self.icon  # the default icon is a dark outline, which follows the palette
             if self.stylish_icons:
-                pixmap = QPixmap(size, size)
+                pixmap = QPixmap(int(size * ratio), int(size * ratio))
+                pixmap.setDevicePixelRatio(ratio)
                 pixmap.fill(Qt.GlobalColor.transparent)
                 path = QPainterPath()
                 path.addRoundedRect(0, 0, size, size, 3.7, 3.7)
@@ -1793,10 +1799,10 @@ class ContactDetail(object):
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
                 painter.setClipPath(path)
-                self.icon.paint(painter, pixmap.rect(), Qt.AlignmentFlag.AlignCenter)
+                icon.paint(painter, QRect(0, 0, size, size), Qt.AlignmentFlag.AlignCenter)
                 painter.end()
             else:
-                pixmap = self.icon.pixmap(size)
+                pixmap = icon.pixmap(QSize(size, size), ratio)
             return self.__dict__.setdefault('pixmap', pixmap)
 
     def handle_notification(self, notification):
@@ -1953,8 +1959,7 @@ class GroupWidget(base_class, ui_class):
         if self.__dict__.get('selected', None) == value:
             return
         self.__dict__['selected'] = value
-        self.name_label.setStyleSheet("color: #ffffff; font-weight: bold;" if value else "color: #000000;")
-        # self.name_label.setForegroundRole(QPalette.ColorRole.BrightText if value else QPalette.ColorRole.WindowText)
+        self.name_label.setStyleSheet("font-weight: bold;" if value else "")
         self.update()
 
     selected = property(_get_selected, _set_selected)
@@ -2001,18 +2006,21 @@ class GroupWidget(base_class, ui_class):
         painter = QPainter(self)
         rect = self.rect()
 
+        # derived from the palette, matching the original #eeeeee based look on the default light palette
+        base_color = self.palette().color(QPalette.ColorRole.Button)
+        shade = base_color.lighter if is_dark_palette(self.palette()) else base_color.darker  # the selection stands out towards the light on dark palettes
         background = QLinearGradient(0, 0, self.width(), self.height())
         if self.selected:
-            background.setColorAt(0.0, QColor('#cacaca'))
-            background.setColorAt(1.0, QColor('#b4b4b4'))
-            upper_color = QColor('#f0f0f0')
-            lower_color = QColor('#a4a4a4')
+            background.setColorAt(0.0, shade(118))
+            background.setColorAt(1.0, shade(133))
+            upper_color = base_color
+            lower_color = base_color.darker(146)
             foreground = QColor('#ffffff')
         else:
-            background.setColorAt(0.0, QColor('#eeeeee'))
-            background.setColorAt(1.0, QColor('#d8d8d8'))
-            upper_color = QColor('#f8f8f8')
-            lower_color = QColor('#c4c4c4')
+            background.setColorAt(0.0, base_color)
+            background.setColorAt(1.0, base_color.darker(111))
+            upper_color = base_color.lighter(104)
+            lower_color = base_color.darker(122)
             foreground = QColor('#888888')
 
         painter.fillRect(rect, QBrush(background))
@@ -4839,7 +4847,10 @@ class ContactURIModel(QAbstractTableModel):
                 return item.default
         elif role == Qt.ItemDataRole.ForegroundRole:
             if column == ContactURIModel.AddressColumn and item.ghost:
-                return self.table_view.palette().brush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text).color()
+                palette = self.table_view.palette()
+                if is_dark_palette(palette):
+                    return palette.color(QPalette.ColorRole.PlaceholderText)  # dark schemes dim the disabled text too much for a placeholder
+                return palette.brush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text).color()
         return None
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):

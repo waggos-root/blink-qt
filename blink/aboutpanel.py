@@ -1,10 +1,12 @@
 
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPalette
 
 from blink import __date__, __version__
 from blink.resources import Resources
 from blink.util import QSingleton, translate
+from blink.widgets.util import is_dark_palette
 
 
 __all__ = ['AboutPanel']
@@ -17,7 +19,7 @@ credits_text = """
 <meta name="qrichtext" content="1" />
 <style type="text/css">
  td.name { text-align: right; padding-right: 6px; }
- a:link  { text-decoration: none; color: #1f487f; }
+ a:link  { text-decoration: none; color: %(link_color)s; }
 </style>
 </head>
 <body>
@@ -52,7 +54,8 @@ class AboutPanel(base_class, ui_class, metaclass=QSingleton):
         credits_width = self.credits_text.fontMetrics().size(Qt.TextFlag.TextSingleLine, "NLnet Foundation" + "http://sipsimpleclient.org").width() + 40
         self.credits_text.setFixedWidth(credits_width)
         self.credits_text.document().documentLayout().documentSizeChanged.connect(self._credits_size_changed)
-        self.credits_text.setHtml(credits_text)
+        link_color = self.palette().color(QPalette.ColorRole.Link).name() if is_dark_palette(self.palette()) else '#1f487f'
+        self.credits_text.setHtml(credits_text % dict(link_color=link_color))
 
     def _credits_size_changed(self, size):
         self.credits_text.document().documentLayout().documentSizeChanged.disconnect(self._credits_size_changed)

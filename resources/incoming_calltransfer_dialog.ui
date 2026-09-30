@@ -56,6 +56,10 @@
 	border-style: solid;
 }
 
+QFrame#frame QLabel#username_label {
+	color: #000000;
+}
+
 
 </string>
      </property>

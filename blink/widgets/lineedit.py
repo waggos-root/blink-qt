@@ -1,13 +1,13 @@
 
 import re
 
-from PyQt6.QtCore import Qt, QEvent, pyqtSignal
-from PyQt6.QtGui import QPainter, QPalette, QPixmap
+from PyQt6.QtCore import Qt, QEvent, QPointF, QSize, pyqtSignal
+from PyQt6.QtGui import QIcon, QPainter, QPalette, QPixmap
 from PyQt6.QtWidgets import QAbstractButton, QLineEdit, QBoxLayout, QHBoxLayout, QLabel, QLayout, QSizePolicy, QSpacerItem, QStyle, QStyleOptionFrame, QWidget
 
 from blink.resources import Resources
 from blink.util import translate
-from blink.widgets.util import QtDynamicProperty
+from blink.widgets.util import QtDynamicProperty, is_dark_palette, palette_icon
 
 
 __all__ = ['LineEdit', 'ValidatingLineEdit', 'SearchBox', 'LocationBar']
@@ -107,7 +107,10 @@ class LineEdit(QLineEdit):
             text_rect = self.style().subElementRect(QStyle.SubElement.SE_LineEditContents, options, self)
             text_rect.adjust(self.left_margin+2, 0, -self.right_margin, 0)
             painter = QPainter(self)
-            painter.setPen(self.palette().brush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text).color())
+            if is_dark_palette(self.palette()):
+                painter.setPen(self.palette().color(QPalette.ColorRole.PlaceholderText))  # dark schemes dim the disabled text too much for a placeholder
+            else:
+                painter.setPen(self.palette().brush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text).color())
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self.inactiveText)
 
     def addHeadWidget(self, widget):
@@ -193,18 +196,17 @@ class SearchIcon(QWidget):
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setVisible(True)
         self.setMinimumSize(size+2, size+2)
-        pixmap = QPixmap()
-        if pixmap.load(Resources.get("icons/search.svg")):
-            self.icon = pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-        else:
-            self.icon = None
+        self.icon_size = size
+        self.icon = QIcon(Resources.get("icons/search.svg"))
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        if self.icon is not None:
-            x = int((self.width() - self.icon.width()) / 2)
-            y = int((self.height() - self.icon.height()) / 2)
-            painter.drawPixmap(x, y, self.icon)
+        if not self.icon.isNull():
+            # rendered at paint time to be sharp on HiDPI screens and to follow the palette (matches the placeholder text on dark schemes)
+            icon = palette_icon(self.icon, self.palette(), QPalette.ColorRole.PlaceholderText)
+            pixmap = icon.pixmap(QSize(self.icon_size, self.icon_size), self.devicePixelRatio())
+            size = pixmap.deviceIndependentSize()
+            painter.drawPixmap(QPointF((self.width() - size.width()) / 2, (self.height() - size.height()) / 2), pixmap)
 
 
 class ClearButton(QAbstractButton):

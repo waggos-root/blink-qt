@@ -2,7 +2,7 @@
 import os
 from datetime import timedelta
 
-from PyQt6.QtCore import Qt, QEvent
+from PyQt6.QtCore import Qt, QEvent, QSize
 from PyQt6.QtGui import QAction, QBrush, QColor, QFontMetrics, QIcon, QLinearGradient, QPainter, QPalette, QPen
 from PyQt6.QtWidgets import QFileDialog, QLabel, QMenu
 
@@ -13,7 +13,7 @@ from sipsimple.configuration.datatypes import Path
 from blink.resources import IconManager
 from blink.util import translate
 from blink.widgets.color import ColorHelperMixin
-from blink.widgets.util import QtDynamicProperty, ContextMenuActions
+from blink.widgets.util import QtDynamicProperty, ContextMenuActions, is_dark_palette, palette_icon
 
 
 __all__ = ['DurationLabel', 'IconSelector', 'LatencyLabel', 'PacketLossLabel', 'Status', 'StatusLabel', 'StreamInfoLabel', 'ElidedLabel', 'ContactState']
@@ -27,6 +27,7 @@ class IconSelector(QLabel):
 
     def __init__(self, parent=None):
         super(IconSelector, self).__init__(parent)
+        self.setProperty('keepIconColors', True)  # shows user icons and adapts the default one itself
         self.actions = ContextMenuActions()
         self.actions.select_icon = QAction(translate('icon_selector', 'Select icon...'), self, triggered=self._SH_ChangeIconActionTriggered)
         self.actions.remove_icon = QAction(translate('icon_selector', 'Use contact provided icon'), self, triggered=self._SH_RemoveIconActionTriggered)
@@ -42,8 +43,7 @@ class IconSelector(QLabel):
 
     def _set_icon(self, icon):
         self.__dict__['icon'] = icon
-        icon = icon or self.default_icon or QIcon()
-        self.setPixmap(icon.pixmap(self.icon_size))
+        self._update_pixmap()
 
     icon = property(_get_icon, _set_icon)
     del _get_icon, _set_icon
@@ -82,20 +82,25 @@ class IconSelector(QLabel):
         else:
             self.contact_icon = icon_manager.get(contact.id)
 
+    def _update_pixmap(self, mode=QIcon.Mode.Normal):
+        # the default icon is a dark outline, so it follows the palette to remain visible on dark color schemes
+        icon = self.__dict__.get('icon') or palette_icon(self.default_icon or QIcon(), self.palette(), QPalette.ColorRole.PlaceholderText)  # icon is not yet set while initializing
+        self.setPixmap(icon.pixmap(QSize(self.icon_size, self.icon_size), self.devicePixelRatio(), mode))
+
     def event(self, event):
         if event.type() == QEvent.Type.DynamicPropertyChange and event.propertyName() == 'icon_size':
             self.setFixedSize(self.icon_size+12, self.icon_size+12)
             self.update()
+        elif event.type() == QEvent.Type.DynamicPropertyChange and event.propertyName() == 'default_icon' or event.type() in (QEvent.Type.PaletteChange, QEvent.Type.DevicePixelRatioChange):
+            self._update_pixmap()
         return super(IconSelector, self).event(event)
 
     def enterEvent(self, event):
-        icon = self.icon or self.default_icon or QIcon()
-        self.setPixmap(icon.pixmap(self.icon_size, mode=QIcon.Mode.Selected))
+        self._update_pixmap(QIcon.Mode.Selected)
         super(IconSelector, self).enterEvent(event)
 
     def leaveEvent(self, event):
-        icon = self.icon or self.default_icon or QIcon()
-        self.setPixmap(icon.pixmap(self.icon_size, mode=QIcon.Mode.Normal))
+        self._update_pixmap(QIcon.Mode.Normal)
         super(IconSelector, self).leaveEvent(event)
 
     def mouseReleaseEvent(self, event):
@@ -252,6 +257,9 @@ class StatusLabel(QLabel):
         if value is not None:
             color = QColor(value.color)
             palette = self.palette()
+            if is_dark_palette(palette) and color.lightness() < 128:
+                # the status colors are meant for light backgrounds, use the text color for grays and a lighter shade of the others
+                color = palette.color(QPalette.ColorRole.WindowText) if color.hslSaturation() < 32 else QColor.fromHsl(color.hslHue(), color.hslSaturation(), 160)
             palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.WindowText, color)
             palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.Text, color)
             palette.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.WindowText, color)

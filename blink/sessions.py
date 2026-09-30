@@ -1665,6 +1665,7 @@ ui_class, base_class = uic.loadUiType(Resources.get('audio_session.ui'))
 class AudioSessionWidget(base_class, ui_class):
     def __init__(self, session, parent=None):
         super(AudioSessionWidget, self).__init__(parent)
+        self.setProperty('lightBackground', True)  # paints its own light background, see paintEvent
         with Resources.directory:
             self.setupUi(self)
         # add a left margin for the colored band
@@ -1905,6 +1906,7 @@ ui_class, base_class = uic.loadUiType(Resources.get('audio_session_drag.ui'))
 class DraggedAudioSessionWidget(base_class, ui_class):
     def __init__(self, session_widget, parent=None):
         super(DraggedAudioSessionWidget, self).__init__(parent)
+        self.setProperty('lightBackground', True)  # paints its own light background, see paintEvent
         with Resources.directory:
             self.setupUi(self)
 
@@ -6963,6 +6965,8 @@ class SessionManager(object, metaclass=Singleton):
         self.outbound_ringtone = outbound_ringtone
         self.inbound_ringtone = inbound_ringtone
         self.hold_tone = hold_tone
+
+        NotificationCenter().post_notification('BlinkCallStateDidChange', sender=self)
 
     def _process_remote_proposal(self, blink_session):
         sip_session = blink_session.sip_session

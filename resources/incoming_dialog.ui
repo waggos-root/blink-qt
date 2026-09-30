@@ -53,6 +53,10 @@
 	border-style: solid;
 }
 
+QFrame#frame QLabel#username_label {
+	color: #000000;
+}
+
 
 </string>
      </property>
@@ -374,11 +378,11 @@
           </property>
           <property name="icon">
            <iconset>
-            <normaloff>icons/chat.png</normaloff>
+            <normaloff>icons/chat.svg</normaloff>
             <normalon>icons/chat-rejected.png</normalon>
-            <disabledoff>icons/chat.png</disabledoff>
+            <disabledoff>icons/chat.svg</disabledoff>
             <disabledon>icons/chat-rejected.png</disabledon>
-            <selectedon>icons/chat-auto-rejected.png</selectedon>icons/chat.png</iconset>
+            <selectedon>icons/chat-auto-rejected.png</selectedon>icons/chat.svg</iconset>
           </property>
           <property name="iconSize">
            <size>

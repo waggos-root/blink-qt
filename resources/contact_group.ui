@@ -191,6 +191,7 @@ border-width: 0;
          </property>
          <property name="styleSheet">
           <string>background-color: white;
+color: black;
 border-style: outset;
 border-width: 2px;
 border-radius: 4px;

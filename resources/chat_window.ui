@@ -243,6 +243,14 @@ QToolButton:pressed {
 	background: white;
 }
 
+QWidget#session_widget QLabel#name_label {
+	color: #000000;
+}
+
+QWidget#session_widget QLabel#info_label {
+	color: #7f7f7f;
+}
+
 QWidget#session_widget_no:hover {
 	background: rgb(240, 252, 255);
 	background: rgb(230, 248, 255);

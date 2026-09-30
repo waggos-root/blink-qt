@@ -1,3 +1,121 @@
+blink (6.0.8+headset17) noble; urgency=medium
+
+  * Show the presence state as a dot on the system tray icon when not
+    available
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 16:32:55 -0500
+
+blink (6.0.8+headset16) noble; urgency=medium
+
+  * Add a Presence submenu to the system tray icon menu
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 16:29:50 -0500
+
+blink (6.0.8+headset15) noble; urgency=medium
+
+  * Presence button: readable menu arrow on the state colors and
+    separator kept inside the border; larger intrinsic size for SVG
+    icons loaded as pixmaps by uic
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 16:24:51 -0500
+
+blink (6.0.8+headset14) noble; urgency=medium
+
+  * Add account dialog: dark input panel and readable status colors on
+    dark color schemes
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 16:06:45 -0500
+
+blink (6.0.8+headset13) noble; urgency=medium
+
+  * Dark color schemes: lighten dark monochrome icons application wide,
+    readable placeholders and names on light panels, HiDPI contact list
+    icons
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 16:01:56 -0500
+
+blink (6.0.8+headset12) noble; urgency=medium
+
+  * Contact editor: align the contact icon with the name field and
+    render it sharp and readable on dark color schemes
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 15:53:08 -0500
+
+blink (6.0.8+headset11) noble; urgency=medium
+
+  * Use the SVG versions of the call, video, chat, screen sharing and
+    bell icons, and a readable silent button on dark color schemes
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 15:50:45 -0500
+
+blink (6.0.8+headset10) noble; urgency=medium
+
+  * Render the search box icon sharp on HiDPI screens and readable on
+    dark color schemes
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 15:44:48 -0500
+
+blink (6.0.8+headset9) noble; urgency=medium
+
+  * Use the palette placeholder color for inactive line edit text on
+    dark color schemes
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 15:41:38 -0500
+
+blink (6.0.8+headset8) noble; urgency=medium
+
+  * Use the palette link color in the About panel on dark color schemes
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 15:40:21 -0500
+
+blink (6.0.8+headset7) noble; urgency=medium
+
+  * Make the main window readable with dark color schemes: palette based
+    group headers, light toolbar and account icons, no fixed activity
+    note colors
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 15:37:36 -0500
+
+blink (6.0.8+headset6) noble; urgency=medium
+
+  * Set the desktop file name so window managers identify blink's
+    windows (Wayland app_id)
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 15:27:17 -0500
+
+blink (6.0.8+headset5) noble; urgency=medium
+
+  * Fix the account picture being offset and clipped on HiDPI screens
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 15:23:39 -0500
+
+blink (6.0.8+headset4) noble; urgency=medium
+
+  * Return the headset on-hook when a call fails before ringing or no
+    call is placed
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 13:16:31 -0500
+
+blink (6.0.8+headset3) noble; urgency=medium
+
+  * Dial from the headset key pad and send key presses as DTMF during
+    calls
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 13:10:05 -0500
+
+blink (6.0.8+headset2) noble; urgency=medium
+
+  * Honor silent mode on the headset: flash the ring LED without
+    sounding the ringer
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 13:03:42 -0500
+
+blink (6.0.8+headset1) noble; urgency=medium
+
+  * Add call control for HID telephony headsets (Yealink WH66)
+
+ -- Washington <wguerrero42@gmail.com>  Wed, 30 Sep 2026 12:49:22 -0500
+
 blink (6.0.8) unstable; urgency=medium
 
   * Fix svg dependency

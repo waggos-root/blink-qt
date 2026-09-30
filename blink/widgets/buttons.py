@@ -373,6 +373,16 @@ class SwitchViewButton(QPushButton):
         event.ignore()
 
 
+def contrast_ratio(color1, color2):
+    """The WCAG contrast ratio between two colors (1 to 21)"""
+    def luminance(color):
+        channels = [value / 255 for value in (color.red(), color.green(), color.blue())]
+        red, green, blue = [value / 12.92 if value <= 0.03928 else ((value + 0.055) / 1.055) ** 2.4 for value in channels]
+        return 0.2126*red + 0.7152*green + 0.0722*blue
+    lighter, darker = sorted((luminance(color1), luminance(color2)), reverse=True)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
 class StateButtonStyle(QCommonStyle, ColorHelperMixin):
     _pixel_metrics = {QStyle.PixelMetric.PM_MenuButtonIndicator: 11, QStyle.PixelMetric.PM_DefaultFrameWidth: 3, QStyle.PixelMetric.PM_ButtonMargin: 1, QStyle.PixelMetric.PM_ButtonShiftHorizontal: 0, QStyle.PixelMetric.PM_ButtonShiftVertical: 0,
                       QStyle.PixelMetric.PM_ButtonIconSize: 32}
@@ -540,14 +550,17 @@ class StateButtonStyle(QCommonStyle, ColorHelperMixin):
         text_color = option.palette.color(QPalette.ColorRole.WindowText if option.state & QStyle.StateFlag.State_AutoRaise else QPalette.ColorRole.ButtonText)
         button_color = option.palette.color(QPalette.ColorRole.Button)
         background_color = self.background_color(button_color, 0.5)
+        if contrast_ratio(text_color, background_color) < 3:
+            # the button color does not come from the palette (e.g. the presence state color), so the palette text color may not contrast with it
+            text_color = max(QColor('#000000'), QColor('#ffffff'), key=lambda color: contrast_ratio(color, background_color))
 
         painter.save()
 
-        # draw separating vertical line
+        # draw separating vertical line, inside the border drawn by drawToolButtonBezel (at 2 pixels from the edges)
         if option.state & (QStyle.StateFlag.State_On|QStyle.StateFlag.State_Sunken):
-            top_offset, bottom_offset = 4, 3
+            top_offset, bottom_offset = 5, 5
         else:
-            top_offset, bottom_offset = 2, 2
+            top_offset, bottom_offset = 4, 4
 
         if option.direction == Qt.LayoutDirection.LeftToRight:
             separator_line = QLineF(arrow_rect.x()-3, arrow_rect.top()+top_offset, arrow_rect.x()-3, arrow_rect.bottom()-bottom_offset)
@@ -598,7 +611,7 @@ class StateButtonStyle(QCommonStyle, ColorHelperMixin):
             else:
                 right_offset = 0
             content_rect = QRectF(self.proxy().subControlRect(QStyle.ComplexControl.CC_ToolButton, option, QStyle.SubControl.SC_ToolButton, widget)).adjusted(margin, margin, -margin-right_offset, -margin)
-            pixmap_rect  = QRectF(pixmap.rect())
+            pixmap_rect  = QRectF(QPointF(0, 0), pixmap.deviceIndependentSize())
             pixmap_rect.moveCenter(content_rect.center())
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
             painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
@@ -610,6 +623,7 @@ class StateButton(QToolButton):
 
     def __init__(self, parent=None):
         super(StateButton, self).__init__(parent)
+        self.setProperty('keepIconColors', True)  # shows the user icon on the state color
         self.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         palette = self.palette()
@@ -622,9 +636,11 @@ class StateButton(QToolButton):
         if pixmap.isNull():
             return pixmap
 
+        # pixmap sizes are in device pixels while painting uses logical ones (they differ on HiDPI screens)
+        ratio = pixmap.devicePixelRatio()
         size = max(pixmap.width(), pixmap.height())
-        offset_x = int((size - pixmap.width())/2)
-        offset_y = int((size - pixmap.height())/2)
+        offset_x = (size - pixmap.width()) / 2 / ratio
+        offset_y = (size - pixmap.height()) / 2 / ratio
         if platform.system() == 'Darwin':
             if size == 48:
                 # default icon
@@ -636,14 +652,15 @@ class StateButton(QToolButton):
                 offset_y = offset_y + 16
 
         new_pixmap = QPixmap(size, size)
+        new_pixmap.setDevicePixelRatio(ratio)
         new_pixmap.fill(Qt.GlobalColor.transparent)
         path = QPainterPath()
-        path.addRoundedRect(0, 0, size, size, 3.7, 3.7)
+        path.addRoundedRect(0, 0, size / ratio, size / ratio, 3.7, 3.7)
         painter = QPainter(new_pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
         painter.setClipPath(path)
-        painter.drawPixmap(offset_x, offset_y, pixmap)
+        painter.drawPixmap(QPointF(offset_x, offset_y), pixmap)
         painter.end()
 
         return new_pixmap
