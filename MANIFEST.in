@@ -21,6 +21,7 @@ include debian/control
 include debian/copyright
 include debian/rules
 include debian/source/format
+graft debian/icons
 
 graft docs
 
