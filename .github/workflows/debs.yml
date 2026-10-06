@@ -1,0 +1,45 @@
+name: Debian packages
+
+on:
+  push:
+    branches: ['**']
+    tags: ['*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build for Ubuntu 24.04 (noble)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install packaging tools
+        run: |
+          # makedeb.sh installs the build dependencies with mk-build-deps,
+          # which would otherwise stop at apt's confirmation prompt
+          echo 'APT::Get::Assume-Yes "true";' | sudo tee /etc/apt/apt.conf.d/90assume-yes
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends equivs devscripts python3-setuptools
+
+      - name: Build packages
+        # the changelog already targets noble, so no distro suffix is added
+        run: bash makedeb.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blink-noble
+          path: |
+            dist/*.deb
+            dist/*.buildinfo
+            dist/*.changes
+          if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.deb --title "$GITHUB_REF_NAME" --generate-notes
